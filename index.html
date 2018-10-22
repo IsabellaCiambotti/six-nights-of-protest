@@ -1,0 +1,336 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ciambotti</title>
+    <script src="https://d3js.org/d3.v4.min.js"></script> 
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link href="https://fonts.googleapis.com/css?family=Cairo:300" rel="stylesheet">
+    <script>
+        
+        var data;
+        var svg;
+        
+        function getData() {
+            d3.csv("sample1.csv", function(d) {
+                data = d;
+                buildPeopleYIndex();
+                drawSvg();
+                drawAxis();
+                buildDays();
+                drawTweets();
+            });
+        }
+        var width = 1200; 
+        var height= 2000;
+        var margin= {top: 5, right: 5, bottom:5, left: 5};
+        
+        function drawSvg(){
+            svg = d3.select("body")
+                .append("svg:svg")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+                .attr ("width", width + margin.left - margin.right )
+                .attr ("height", height + margin.top - margin.bottom)   
+        }
+        
+        function splitDate(datetime) {
+            var datetimesplit= datetime.split(" ");
+            return datetimesplit[0];  
+        } 
+        
+        var xScaleAxis = d3.scaleTime()
+            .domain([new Date("2015-04-18"), new Date("2015-04-18")])
+            .range([0,70]);
+        
+        var xScale = d3.scaleTime()
+            .domain([new Date("2015-04-18"), new Date("2015-05-02")])
+            .range([0,1000]);
+        
+        function returnDate() {
+            data.forEach(function(d){
+                xScale(replaceDate(d.created_at));
+            });  
+        }
+
+        var days;
+        function buildDays() {
+            days = d3.map(data, function(d,i) {return d["date"];}).keys()
+                       .filter(function(val){return val !== undefined;});
+        }
+
+        var people =[];
+        function buildPeopleYIndex() {
+            peopleCount = people.length;
+            var increment = 1;
+            data.forEach(function(d){
+                if (people.indexOf(d["user_screen_name"]) === -1) {
+                    var yValue = peopleCount * increment;
+                    people[d["user_screen_name"]]=yValue;
+                    peopleCount++;
+                }
+            });
+        }
+        
+        function drawAxis() {
+            var xAxis = d3.axisTop(xScale)
+                .tickFormat(d3.timeFormat("%d"))
+                .ticks(8)
+                .tickSize(4)            
+            svg.append("g")
+                .attr("class", "axis")  
+                .attr("transform", "translate(20,20)")
+                .call(xAxis);    
+       }
+        
+        
+        function drawTweets() {
+             svg.selectAll("rect")
+                    .data(data)
+                .enter().append("rect")
+                    .attr("transform", "translate(20,30)")
+                    .attr("x", function(d) { return (days.indexOf(d.date) + xScale(new Date(d.created_at)))})
+                    .attr("y", function(d) { return people[d["user_screen_name"]]})
+                    .attr("width", 60)
+                    .attr("height", .5)
+                    .attr("title", function(d) {return d.created_at})
+                    .style("fill", "#7ea5bc")
+                    .on("mouseover", highlight)
+                    .on("mouseout", unhighlight);
+        }
+        
+         function splitText() {
+            var split = d["text"].split("https")
+            return split[0];
+        }
+        
+        function highlight(d,i) {
+            var rect = d3.select(this)
+                .style("stroke","yellow")
+                .style("stroke-width",".5");
+    
+            d3.select("#text").text(data[i]["text"]);
+            d3.select("#loc").text(data[i]["user_location"]);
+            //d3.select("#rt").text(data[i]["retweet_count"]);
+             
+            d3.select("#tooltip")
+                .style("top", d3.event.pageY + 5 + "px")
+                .style("left", d3.event.pageX -5 + "px")
+                .style("visibility","visible");
+        }
+        
+        function unhighlight(d,i) {
+            var rect = d3.select(this)
+                .style("stroke","")
+                .style("stroke-width","");
+            
+            d3.select("#tooltip")
+                .style("visibility","hidden");
+        }
+        
+        function filterBLM(){
+            
+            var clickedBLM = d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "BlackLivesMatter" ||  d["hashtags"] == "blacklivesmatter" || d["hashtags"] == "HandsUpDontShoot" || d["hashtags"] == "BLM" || d["hashtags"] == "blm" || d["hashtags"] == "Icantbreathe" || d["hashtags"] == "NoJusticeNoPeace"})
+                        .attr("class") == "clickedBLM";
+             if (!clickedBLM) {
+                 d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "BlackLivesMatter" ||  d["hashtags"] == "blacklivesmatter" || d["hashtags"] == "HandsUpDontShoot" || d["hashtags"] == "BLM" || d["hashtags"] == "blm" || d["hashtags"] == "Icantbreathe" || d["hashtags"] == "NoJusticeNoPeace"})
+                        .attr("class","clickedBLM")
+                        .style("fill","#231F42");
+             } else {
+                d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "BlackLivesMatter" ||  d["hashtags"] == "blacklivesmatter" || d["hashtags"] == "HandsUpDontShoot" || d["hashtags"] == "BLM" || d["hashtags"] == "blm" || d["hashtags"] == "Icantbreathe" || d["hashtags"] == "NoJusticeNoPeace"})
+                        .attr("class","")
+                        .style("fill","#7ea5bc");
+            }
+            
+        }
+        
+        function filterBalt(){
+            var clickedBalt = d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "FreddieGray" || d["hashtags"] == "Baltimore"})
+                        .attr("class") == "clickedBalt";
+             if (!clickedBalt) {
+                 d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "FreddieGray" || d["hashtags"] == "Baltimore"})
+                        .attr("class","clickedBalt")
+                        .style("fill","#A4243B");
+             } else {
+                d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "FreddieGray" || d["hashtags"] == "Baltimore"})
+                        .attr("class","")
+                        .style("fill","#7ea5bc");
+            }
+            
+        }
+        
+        function filterFerg(){  
+            var clickedFerg = d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "MichaelBrown" || d["hashtags"] == "MikeBrown" || d["hashtags"] == "Ferguson"})
+                        .attr("class") == "clickedFerg";
+             if (!clickedFerg) {
+                 d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "MichaelBrown" || d["hashtags"] == "MikeBrown" || d["hashtags"] == "Ferguson"})
+                        .attr("class","clickedFerg")
+                        .style("fill","#B74499");
+             } else {
+                d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "MichaelBrown" || d["hashtags"] == "MikeBrown" || d["hashtags"] == "Ferguson"})
+                        .attr("class","")
+                        .style("fill","#7ea5bc");
+            }
+            
+        }
+        
+        function filterSC(){  
+            var clickedSC = d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "WalterScott" })
+                        .attr("class") == "clickedSC";
+             if (!clickedSC) {
+                 d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "WalterScott" })
+                        .attr("class","clickedSC")
+                        .style("fill","#BD632F");
+             } else {
+                d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "WalterScott" })
+                        .attr("class","")
+                        .style("fill","#7ea5bc");
+            }
+            
+        }
+        
+        function filterNYC(){  
+            var clickedNYC = d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "EricGarner" || d["hashtags"] == "Icantbreathe"})
+                        .attr("class") == "clickedNYC";
+             if (!clickedNYC) {
+                 d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "EricGarner" || d["hashtags"] == "Icantbreathe"})
+                        .attr("class","clickedNYC")
+                        .style("fill","#1F7F16");
+             } else {
+                d3.selectAll("rect")
+                    .filter(function(d) {return d["hashtags"] == "EricGarner" || d["hashtags"] == "Icantbreathe"})
+                        .attr("class","")
+                        .style("fill","#7ea5bc");
+            }
+            
+        }
+           
+        
+        function trackRetweets(){
+            var clickedUsers = d3.selectAll("rect") 
+                .filter (function(d) { return (d.retweet_count)})
+                    .attr("class") == "clickedUsers";
+            if (!clickedUsers) {
+                d3.selectAll("rect") 
+                .filter (function(d) { return (d.retweet_count)})
+                    .attr("class", "clickedUsers")
+                    .style("fill", function(d) {        
+                        if (d.retweet_count <= 20) {return "rgb(254,237,222, 0.1)"}
+                        else if (d.retweet_count >= 1000) {return "c"}
+                        else if (d.retweet_count >= 500) {return "#a63603"}
+                        else if (d.retweet_count >= 100) {return "#e6550d"}
+                        else if (d.retweet_count >= 20) {return "#fd8d3c"}
+                        else { return "#7ea5bc" }             
+                    ;}) 
+            }
+            else {
+               d3.selectAll("rect") 
+                .filter (function(d) { return (d.retweet_count)})
+                .attr("class", "")
+                .style("fill", "#7ea5bc")
+            }
+        }
+        function showRetweetLegend(){
+            var x = document.getElementById("rtLegend"); 
+            if (x.style.visibility == "visible") {
+                x.style.visibility = "hidden";
+            } else {
+                x.style.visibility = "visible";
+            }
+           
+        }
+        
+        function topUsers() {
+            var clickedUsers = d3.selectAll("rect") 
+                .filter (function(d) { return (d.user_followers_count)})
+                    .attr("class") == "clickedUsers";
+            if (!clickedUsers) {
+                d3.selectAll("rect") 
+                .filter (function(d) { return (d.user_followers_count) < 6000})
+                    .attr("class", "clickedUsers")
+                    .style('opacity', "0.1")
+            }
+            else {
+               d3.selectAll("rect") 
+                .filter (function(d) { return (d.user_followers_count)})
+                .attr("class", "")
+                .style("opacity", "1")
+            }
+        }
+        function showUsersLegend(){
+            var x = document.getElementById("usersLegend"); 
+            if (x.style.visibility == "visible") {
+                x.style.visibility = "hidden";
+            } else {
+                x.style.visibility = "visible";
+            } 
+        }
+        
+        function showTimeline() {
+            var x = document.getElementById("timeline"); 
+            if (x.style.display == "block") {
+                x.style.display= "none";
+            } else {
+                x.style.display = "block";
+            }
+        }
+        
+    </script> 
+    
+    
+</head>
+<body onload="getData()">
+<h1>SIX NIGHTS OF PROTEST</h1>
+    <h2>twitter activity after the death of Freddie Gray in Baltimore | April 18 - May 1 2015</h2>
+    <div id="timeline">
+       <ul class="timeline-container">
+           <li id="19">Gray dies in the hospital after entering a coma during his arrest six days prior. Protests begin in earnest outside the police station.</li><li id="21">A march shuts down main roads to the Inner Harbor. This is the fourth straight night of demonstrations.</li><li id="23">Protests intensify, but remain nonviolent. The Governor of Maryland sends in state troopers. </li><li id="25">The sixth straight day of protests is the largest one yet. Evening sees a turn towards violence; burning and looting begin.</li><li id="27">Peaceful protests during the day continue to be eclipsed by nighttime riots. The Mayor institutes a weeklong city curfew from 10 p.m. to 5 a.m. </li><li id="29">Students across Baltimore stage mass peaceful protests, followed by demonstrations in cities across the US, including DC, Manhattan, Minneapolis, and Boston. </li><li id="01">The six arresting police officers are charged in Freddie Gray's death.</li>
+        </ul>
+    </div>
+<div class="axisDupe">
+    <ul>
+        <li>18</li><li>21</li><li>23</li><li>25</li><li>27</li><li>29</li><li>01</li>
+    </ul>
+    
+</div>
+    <div class="filter">
+        <div class="filter-container">
+            <button onclick="trackRetweets(); showRetweetLegend()">see top retweets</button><div class="legend" id="rtLegend"><p>>1,000</p></div>
+            <button onclick="topUsers(); showUsersLegend()">see top users</button><div class="legend" id="usersLegend"><p>users with over 6,000 followers</p></div>
+                <div class="checkboxes">
+                    <p>track a conversation:</p>
+                    <label class="container" id="BLM" onclick="filterBLM()"><input type="checkbox"><b style="color: #231F42">Black Lives Matter</b> only</label>
+                    <label class="container" id="Balt" onclick="filterBalt()"><input type="checkbox"><b style="color: #A4243B">Baltimore:</b> Freddie Gray </label>
+                    <label class="container" id="Ferg" onclick="filterFerg()"><input type="checkbox"><b style="color: #B74499">Ferguson:</b> Michael Brown</label>
+                    <label class="container" id="SC" onclick="filterSC()"><input type="checkbox"><b style="color: #BD632F">South Carolina:</b> Walter Scott</label>
+                    <label class="container" id="NYC" onclick="filterNYC()"><input type="checkbox"><b style="color: #1F7F16">New York:</b> Eric Garner</label>
+                </div>
+            <div class="timeline-button">
+                <button onclick="showTimeline()">see event timeline</button>
+            </div>
+        </div> 
+        <div id="credits">
+                <p>by Isabella Ciambotti, Data Visualization Final Project. All event updates sourced from The Baltimore Sun; their timelines can be found <a href="http://www.baltimoresun.com/news/maryland/baltimore-city/west-baltimore/bal-freddie-gray-protests-social-photos-20150422-htmlstory.html">here</a> and <a href="http://data.baltimoresun.com/news/freddie-gray/">here.</a> All Twitter data publicly released from the 2016 Center for Media and Social Impact Report, <i>Beyond the hashtags: #Ferguson, #Blacklivesmatter, and the online struggle for offline justice.</i> Authored by Dan Freelon, Charlton D. McIlwain, and Meredith D. Clark. The <a href="http://dfreelon.org/2017/01/03/beyond-the-hashtags-twitter-data/">data</a> and <a href="http://cmsimpact.org/resource/beyond-hashtags-ferguson-blacklivesmatter-online-struggle-offline-justice/">report</a> are available freely online.<br>University of Virginia, May 2017. </p>
+        </div>
+    </div>
+    
+<div id="tooltip">
+    <span id="text"></span><br />
+    <i><span id="loc"></span></i><br />
+    <!--Retweet Count:<span id="text"></span><br /> -->
+</div>
+</body>
+</html>
